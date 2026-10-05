@@ -1,0 +1,6 @@
+/dist/
+/shellout
+.DS_Store
+
+# Local working documents, never published.
+/docs/
