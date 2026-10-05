@@ -21,13 +21,13 @@ With a real profile (OpenAI key or local Ollama), in a terminal:
 
 ## Versioning
 
-Versions are prereleases while the tool is young. Tag `vX.Y.Z-beta.N`, starting at
-`v0.0.1-beta.1`, and bump `N` for each build. Drop `-beta.N` when the API is
+Versions are prereleases while the tool is young. Tag `vX.Y.Z-beta`, starting at
+`v0.0.2-beta`, and bump `Y.Z` for each release. Drop `-beta` when the API is
 considered stable.
 
 ## Releasing
 
-Tag `vX.Y.Z-beta.N` and push the tag. GoReleaser builds the archives and packages,
+Tag `vX.Y.Z-beta` and push the tag. GoReleaser builds the archives and packages,
 updates the Homebrew tap and pushes the AUR package. Needs the `HOMEBREW_TAP_TOKEN`
 and `AUR_KEY` repository secrets.
 
