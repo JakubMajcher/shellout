@@ -28,7 +28,7 @@ nfpms:
   - package_name: shellout
     homepage: https://github.com/JakubMajcher/shellout
     description: Turn one English sentence into one shell command, confirm, run.
-    maintainer: "MAINTAINER_NAME <MAINTAINER_EMAIL>"
+    maintainer: "Jakub Majcher <75312658+JakubMajcher@users.noreply.github.com>"
     license: GPL-3.0-or-later
     formats: [deb, rpm, apk]
     bindir: /usr/bin
@@ -56,7 +56,7 @@ aurs:
   - name: shellout-bin
     homepage: https://github.com/JakubMajcher/shellout
     description: Turn one English sentence into one shell command, confirm, run.
-    maintainers: ["MAINTAINER_NAME <MAINTAINER_EMAIL>"]
+    maintainers: ["Jakub Majcher <75312658+JakubMajcher@users.noreply.github.com>"]
     license: GPL-3.0-or-later
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/shellout-bin.git"
