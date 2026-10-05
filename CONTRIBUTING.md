@@ -19,11 +19,17 @@ With a real profile (OpenAI key or local Ollama), in a terminal:
 6. A profile with `max_completion_tokens = 5` fails with
    `model ran out of tokens; raise the token limit in params`.
 
+## Versioning
+
+Versions are prereleases while the tool is young. Tag `vX.Y.Z-beta.N`, starting at
+`v0.0.1-beta.1`, and bump `N` for each build. Drop `-beta.N` when the API is
+considered stable.
+
 ## Releasing
 
-Tag `vX.Y.Z` and push the tag. GoReleaser builds the archives and packages, updates
-the Homebrew tap and pushes the AUR package. Needs the `HOMEBREW_TAP_TOKEN` and
-`AUR_KEY` repository secrets.
+Tag `vX.Y.Z-beta.N` and push the tag. GoReleaser builds the archives and packages,
+updates the Homebrew tap and pushes the AUR package. Needs the `HOMEBREW_TAP_TOKEN`
+and `AUR_KEY` repository secrets.
 
 The `maintainer` field in `.goreleaser.yaml` must be filled in before the first
 release; it currently holds a placeholder.
