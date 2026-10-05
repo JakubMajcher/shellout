@@ -1,6 +1,6 @@
 module github.com/JakubMajcher/shellout
 
-go 1.27.1
+go 1.26.0
 
 require (
 	github.com/BurntSushi/toml v1.6.0

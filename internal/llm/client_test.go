@@ -27,8 +27,11 @@ func completion(finish, content string) string {
 
 const goodContent = `{"description":"Lists big files.","command":"find . -size +1G"}`
 
-// server replies with the given responses in order (the last one repeats)
-// and counts the calls.
+// server replies with the given responses in order (the last one repeats).
+// It returns the server and a counter of requests. The counter is read with
+// callCount, not by dereferencing, because the handler goroutine writes it while
+// the test goroutine may still be reading it: a plain read would be a data race
+// that -race reports.
 func server(t *testing.T, responses ...func(w http.ResponseWriter, r *http.Request)) (*httptest.Server, *int32) {
 	t.Helper()
 	var calls int32
@@ -41,6 +44,11 @@ func server(t *testing.T, responses ...func(w http.ResponseWriter, r *http.Reque
 	}))
 	t.Cleanup(srv.Close)
 	return srv, &calls
+}
+
+// callCount reads the request counter atomically.
+func callCount(calls *int32) int {
+	return int(atomic.LoadInt32(calls))
 }
 
 func reply(status int, body string) func(http.ResponseWriter, *http.Request) {
@@ -61,8 +69,8 @@ func TestSuggestValidResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Command != "find . -size +1G" || s.Description != "Lists big files." || *calls != 1 {
-		t.Fatalf("got %+v after %d calls", s, *calls)
+	if s.Command != "find . -size +1G" || s.Description != "Lists big files." || callCount(calls) != 1 {
+		t.Fatalf("got %+v after %d calls", s, callCount(calls))
 	}
 }
 
@@ -140,8 +148,8 @@ func TestRetriesOnceThenFails(t *testing.T) {
 	for name, h := range cases {
 		srv, calls := server(t, h)
 		_, err := client(srv.URL).Suggest(context.Background(), "s", "r")
-		if err == nil || *calls != 2 {
-			t.Errorf("%s: err=%v calls=%d, want error after 2 calls", name, err, *calls)
+		if err == nil || callCount(calls) != 2 {
+			t.Errorf("%s: err=%v calls=%d, want error after 2 calls", name, err, callCount(calls))
 		}
 		if name == "server error" {
 			if err.Error() != "500 Internal Server Error: boom" {
@@ -156,8 +164,8 @@ func TestRetriesOnceThenFails(t *testing.T) {
 func TestRetrySucceedsOnSecondAttempt(t *testing.T) {
 	srv, calls := server(t, reply(500, `{}`), reply(200, completion("stop", goodContent)))
 	s, err := client(srv.URL).Suggest(context.Background(), "s", "r")
-	if err != nil || s.Command != "find . -size +1G" || *calls != 2 {
-		t.Fatalf("s=%+v err=%v calls=%d", s, err, *calls)
+	if err != nil || s.Command != "find . -size +1G" || callCount(calls) != 2 {
+		t.Fatalf("s=%+v err=%v calls=%d", s, err, callCount(calls))
 	}
 }
 
@@ -165,8 +173,8 @@ func TestLengthFailsWithoutRetry(t *testing.T) {
 	srv, calls := server(t, reply(200, completion("length", `{"description":"x","comm`)))
 	_, err := client(srv.URL).Suggest(context.Background(), "s", "r")
 	want := "model ran out of tokens; raise the token limit in params (profile: test)"
-	if err == nil || err.Error() != want || *calls != 1 {
-		t.Fatalf("err=%v calls=%d", err, *calls)
+	if err == nil || err.Error() != want || callCount(calls) != 1 {
+		t.Fatalf("err=%v calls=%d", err, callCount(calls))
 	}
 }
 
@@ -174,8 +182,8 @@ func TestClientErrorsNeverRetry(t *testing.T) {
 	for _, status := range []int{400, 401} {
 		srv, calls := server(t, reply(status, `{"error":{"message":"nope"}}`))
 		_, err := client(srv.URL).Suggest(context.Background(), "s", "r")
-		if err == nil || *calls != 1 || !strings.HasSuffix(err.Error(), ": nope") {
-			t.Errorf("%d: err=%v calls=%d", status, err, *calls)
+		if err == nil || callCount(calls) != 1 || !strings.HasSuffix(err.Error(), ": nope") {
+			t.Errorf("%d: err=%v calls=%d", status, err, callCount(calls))
 		}
 	}
 }
@@ -208,8 +216,8 @@ func TestRefusalDoesNotRetry(t *testing.T) {
 	body := `{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":null,"refusal":"I can't help with that."}}]}`
 	srv, calls := server(t, reply(200, body))
 	_, err := client(srv.URL).Suggest(context.Background(), "s", "r")
-	if err == nil || err.Error() != "model refused: I can't help with that." || *calls != 1 {
-		t.Fatalf("err=%v calls=%d", err, *calls)
+	if err == nil || err.Error() != "model refused: I can't help with that." || callCount(calls) != 1 {
+		t.Fatalf("err=%v calls=%d", err, callCount(calls))
 	}
 }
 
@@ -233,8 +241,8 @@ func TestTimeoutIsHonoredAndRetried(t *testing.T) {
 	c.Timeout = 50 * time.Millisecond
 	start := time.Now()
 	_, err := c.Suggest(context.Background(), "s", "r")
-	if err == nil || !strings.HasPrefix(err.Error(), "request failed: ") || *calls != 2 {
-		t.Fatalf("err=%v calls=%d", err, *calls)
+	if err == nil || !strings.HasPrefix(err.Error(), "request failed: ") || callCount(calls) != 2 {
+		t.Fatalf("err=%v calls=%d", err, callCount(calls))
 	}
 	if time.Since(start) > time.Second {
 		t.Fatalf("timeout not honored: took %v", time.Since(start))
