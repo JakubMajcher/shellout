@@ -40,3 +40,51 @@ jobs:
               CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -o /dev/null ./cmd/shellout
             done
           done
+
+  # Installing the built .deb is the only check that covers the gap between
+  # "the package builds" and "the user can run it": the sho symlink, the
+  # install path and the version flag are all verified by the packaging step,
+  # not by go test.
+  package-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish,validate
+      - name: Install the .deb and check both names work
+        run: |
+          set -euo pipefail
+          deb=$(ls dist/*_amd64.deb)
+          echo "installing $deb"
+          sudo dpkg -i "$deb"
+          echo "--- shellout --version ---"
+          shellout --version
+          echo "--- sho --version (via the symlink) ---"
+          sho --version
+          echo "--- sho is a symlink that resolves to shellout ---"
+          # test -L alone is not enough: it passes for a symlink pointing at a
+          # file that does not exist. Resolving the link is what proves the
+          # target is the installed binary.
+          test -L "$(command -v sho)"
+          test "$(readlink -f "$(command -v sho)")" = "/usr/bin/shellout"
+          echo "sho -> $(readlink -f "$(command -v sho)")"
+          echo "--- both names print the same version ---"
+          test "$(shellout --version)" = "$(sho --version)"
+          echo "--- init prints a script, exit code 0 ---"
+          shellout init zsh | head -1
+          echo "--- an unsupported shell exits 2 ---"
+          if shellout init tcsh; then
+            echo "expected exit 2 for init tcsh" >&2
+            exit 1
+          fi
+          echo "--- no terminal on stdin exits 2 ---"
+          if echo hi | shellout list files; then
+            echo "expected exit 2 without a terminal" >&2
+            exit 1
+          fi
