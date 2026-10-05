@@ -13,6 +13,16 @@ import (
 	"golang.org/x/term"
 )
 
+const (
+	// requestPrompt asks for the natural-language request.
+	requestPrompt = "> "
+	// editPrompt is distinct from requestPrompt on purpose. With one prompt for
+	// both, the line that opens after pressing e looks exactly like a fresh
+	// request, which reads as "shellout is waiting for something" instead of
+	// "edit the command that is already here".
+	editPrompt = "edit> "
+)
+
 // Terminal reads from In (the TTY) and draws on Out (stderr).
 type Terminal struct {
 	In  *os.File
@@ -22,7 +32,7 @@ type Terminal struct {
 // ReadRequest shows a "> " prompt and returns the trimmed line.
 // Ctrl-C or Ctrl-D returns "" and a nil error.
 func (t Terminal) ReadRequest() (string, error) {
-	return t.readLine("")
+	return t.readLine(requestPrompt, "")
 }
 
 // Confirm shows the suggestion and asks "Run? [y/N/e]". It returns the final
@@ -42,7 +52,7 @@ func (t Terminal) Confirm(desc, cmd string) (string, bool, error) {
 	case Approve:
 		return cmd, true, nil
 	case Edit:
-		edited, err := t.readLine(cmd)
+		edited, err := t.readLine(editPrompt, cmd)
 		if err != nil || edited == "" {
 			return "", false, err
 		}
@@ -67,10 +77,10 @@ func (t Terminal) readKey() (byte, error) {
 	return buf[0], nil
 }
 
-// readLine shows "> " pre-filled with def. Ctrl-C or Ctrl-D returns "".
-func (t Terminal) readLine(def string) (string, error) {
+// readLine shows prompt pre-filled with def. Ctrl-C or Ctrl-D returns "".
+func (t Terminal) readLine(prompt, def string) (string, error) {
 	rl, err := readline.NewFromConfig(&readline.Config{
-		Prompt: "> ",
+		Prompt: prompt,
 		Stdin:  t.In,
 		Stdout: t.Out,
 		Stderr: t.Out,
