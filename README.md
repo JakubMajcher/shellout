@@ -1,8 +1,13 @@
 # SH»OUT
 
+**Say what you want. See the command. Press y.**
+
+![demo](docs/demo/demo.gif)
+
 `shellout` turns one English sentence into one shell command, shows it, and runs it
 after you confirm. It works with any OpenAI-compatible API: OpenAI, Ollama,
-LM Studio, OpenRouter, Groq, vLLM. `sho` is a short alias for the same program.
+LM Studio, OpenRouter, Groq, DeepSeek, vLLM. `sho` is a short alias for the same
+program.
 
 ```
 $ sho find files bigger than 1 GB here
@@ -12,6 +17,10 @@ Run? [y/N/e]
 ```
 
 `y` runs it, `e` lets you edit it first, anything else cancels.
+
+Nothing runs without your keypress. No agent loop, no reading your output, no
+files or paths sent anywhere — the model gets your request, your OS, your shell
+and nothing else.
 
 ## Install
 

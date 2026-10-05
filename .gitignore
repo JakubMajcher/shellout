@@ -2,5 +2,8 @@
 /shellout
 .DS_Store
 
-# Local working documents, never published.
-/docs/
+# Local working documents, never published. docs/demo/ is the exception: the
+# README links to the demo GIF, so it has to be in the repo.
+docs/*
+!/docs/demo/
+!/docs/demo/**
