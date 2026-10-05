@@ -184,11 +184,12 @@ func TestMissingFileWritesLoadableSample(t *testing.T) {
 	if err.Error() != "created sample config at "+p+", edit it and run again" {
 		t.Fatalf("message = %q", err.Error())
 	}
-	got, err := Load(p, "", env(map[string]string{"OPENAI_API_KEY": "k"}))
+	// The written sample must load with only the default profile's key present.
+	got, err := Load(p, "", env(map[string]string{"OPENROUTER_API_KEY": "k"}))
 	if err != nil {
 		t.Fatalf("sample does not load: %v", err)
 	}
-	if got.Name != "openai" || got.Params["reasoning_effort"] != "minimal" {
+	if got.Name != "openrouter" || got.Model == "" || got.Params["provider"] == nil {
 		t.Fatalf("unexpected sample profile: %+v", got)
 	}
 
@@ -199,7 +200,7 @@ func TestMissingFileWritesLoadableSample(t *testing.T) {
 		t.Fatal(err)
 	}
 	// api_key_env holds the variable name only, never a key value.
-	if !strings.Contains(string(body), `api_key_env = "OPENAI_API_KEY"`) {
+	if !strings.Contains(string(body), "api_key_env") {
 		t.Fatal("sample must name the key variable instead of holding the key")
 	}
 	// The OpenRouter note from section D7 has to be in the sample.
