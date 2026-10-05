@@ -3,7 +3,10 @@
 .DS_Store
 
 # Local working documents, never published. docs/demo/ is the exception: the
-# README links to the demo GIF, so it has to be in the repo.
-docs/*
+# README links to the demo GIF and the script that builds it is kept there, so
+# both have to be in the repo. Last matching rule wins, so the bytecode
+# exclusion has to come after the rule that opens docs/demo/ back up.
+/docs/*
 !/docs/demo/
 !/docs/demo/**
+__pycache__/
