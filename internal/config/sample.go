@@ -2,13 +2,11 @@
 
 package config
 
-// Profiles marked "verified" answered an HTTP 401/403/400 on an unauthenticated
-// POST to <base_url>/chat/completions on 2026-10-05, which means the endpoint
-// exists and is reachable. Model names change often; list yours with
+// Model names change often; list the ones your key can reach with
 //
 //	curl -s <base_url>/models -H "Authorization: Bearer $YOUR_KEY_ENV"
 //
-// and put the id in the model field. Profiles that need no API key are commented
+// and put an id in the model field. Profiles that need no API key are commented
 // out, because they are only useful on some machines.
 const sampleConfig = `# shellout config. Docs: https://github.com/JakubMajcher/shellout
 
@@ -18,7 +16,7 @@ default = "openrouter"
 
 # ---------------------------------------------------------------------------
 # OpenRouter: one key, hundreds of models. Swap the model, not the profile.
-# Verified. https://openrouter.ai/models
+# https://openrouter.ai/models
 # ---------------------------------------------------------------------------
 [profiles.openrouter]
 base_url = "https://openrouter.ai/api/v1"
@@ -33,7 +31,7 @@ max_completion_tokens = 1000
 provider = { require_parameters = true }
 
 # ---------------------------------------------------------------------------
-# OpenAI. Verified.
+# OpenAI
 # ---------------------------------------------------------------------------
 [profiles.openai]
 base_url = "https://api.openai.com/v1"
@@ -47,7 +45,7 @@ reasoning_effort = "minimal"
 max_completion_tokens = 1000
 
 # ---------------------------------------------------------------------------
-# Groq: fast and cheap. Verified.
+# Groq: fast and cheap
 # ---------------------------------------------------------------------------
 [profiles.groq]
 base_url = "https://api.groq.com/openai/v1"
@@ -56,7 +54,7 @@ api_key_env = "GROQ_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# DeepSeek: cheap, good at code. Verified.
+# DeepSeek: cheap, good at code
 # ---------------------------------------------------------------------------
 [profiles.deepseek]
 base_url = "https://api.deepseek.com/v1"
@@ -65,7 +63,7 @@ api_key_env = "DEEPSEEK_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Google Gemini through its OpenAI-compatible endpoint. Verified.
+# Google Gemini through its OpenAI-compatible endpoint
 # ---------------------------------------------------------------------------
 [profiles.gemini]
 base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
@@ -74,7 +72,7 @@ api_key_env = "GEMINI_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Mistral. Verified.
+# Mistral
 # ---------------------------------------------------------------------------
 [profiles.mistral]
 base_url = "https://api.mistral.ai/v1"
@@ -83,7 +81,7 @@ api_key_env = "MISTRAL_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# xAI Grok. Verified.
+# xAI Grok
 # ---------------------------------------------------------------------------
 [profiles.xai]
 base_url = "https://api.x.ai/v1"
@@ -92,7 +90,7 @@ api_key_env = "XAI_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Cerebras: very fast inference. Verified.
+# Cerebras: very fast inference
 # ---------------------------------------------------------------------------
 [profiles.cerebras]
 base_url = "https://api.cerebras.ai/v1"
@@ -101,7 +99,7 @@ api_key_env = "CEREBRAS_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Together AI: many open models. Verified.
+# Together AI: many open models
 # ---------------------------------------------------------------------------
 [profiles.together]
 base_url = "https://api.together.xyz/v1"
@@ -110,7 +108,7 @@ api_key_env = "TOGETHER_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Fireworks AI. Verified.
+# Fireworks AI
 # ---------------------------------------------------------------------------
 [profiles.fireworks]
 base_url = "https://api.fireworks.ai/inference/v1"
@@ -119,7 +117,7 @@ api_key_env = "FIREWORKS_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Perplexity: search-grounded models. Verified.
+# Perplexity: search-grounded models
 # ---------------------------------------------------------------------------
 [profiles.perplexity]
 base_url = "https://api.perplexity.ai"
@@ -128,7 +126,7 @@ api_key_env = "PERPLEXITY_API_KEY"
 timeout = "60s"
 
 # ---------------------------------------------------------------------------
-# Novita AI. Verified.
+# Novita AI
 # ---------------------------------------------------------------------------
 [profiles.novita]
 base_url = "https://api.novita.ai/v3/openai"
