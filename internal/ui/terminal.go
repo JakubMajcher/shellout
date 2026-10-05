@@ -56,6 +56,9 @@ func (t Terminal) Confirm(desc, cmd string) (string, bool, error) {
 		if err != nil || edited == "" {
 			return "", false, err
 		}
+		// After an edit the command that runs is not the command that was
+		// suggested, so say which one it is before it starts.
+		fmt.Fprint(t.Out, FormatRunning(edited, color))
 		return edited, true, nil
 	default:
 		return "", false, nil

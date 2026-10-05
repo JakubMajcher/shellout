@@ -53,3 +53,28 @@ func TestFormatSuggestionMultiLine(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestFormatRunningPlain(t *testing.T) {
+	got := FormatRunning("rm -rf logs", false)
+	if got != "Running: rm -rf logs\n" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestFormatRunningColor(t *testing.T) {
+	got := FormatRunning("rm -rf logs", true)
+	if got != "Running: \x1b[1mrm -rf logs\x1b[0m\n" {
+		t.Fatalf("got %q", got)
+	}
+	if strings.Contains(FormatRunning("rm -rf logs", false), "\x1b[") {
+		t.Fatal("escape codes without color")
+	}
+}
+
+// An edited multi-line command must stay readable and must keep every line.
+func TestFormatRunningMultiLine(t *testing.T) {
+	got := FormatRunning("cd /tmp &&\nls -la", false)
+	if got != "Running: cd /tmp &&\nls -la\n" {
+		t.Fatalf("got %q", got)
+	}
+}
