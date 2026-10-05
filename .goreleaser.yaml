@@ -1,0 +1,68 @@
+version: 2
+project_name: shellout
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: shellout
+    main: ./cmd/shellout
+    binary: shellout
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/JakubMajcher/shellout/internal/app.Version={{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [LICENSE, README.md]
+
+checksum:
+  name_template: checksums.txt
+
+nfpms:
+  - package_name: shellout
+    homepage: https://github.com/JakubMajcher/shellout
+    description: Turn one English sentence into one shell command, confirm, run.
+    maintainer: "MAINTAINER_NAME <MAINTAINER_EMAIL>"
+    license: GPL-3.0-or-later
+    formats: [deb, rpm, apk]
+    bindir: /usr/bin
+    contents:
+      - src: /usr/bin/shellout
+        dst: /usr/bin/sho
+        type: symlink
+
+brews:
+  - name: shellout
+    repository:
+      owner: JakubMajcher
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/JakubMajcher/shellout
+    description: Turn one English sentence into one shell command, confirm, run.
+    license: GPL-3.0-or-later
+    install: |
+      bin.install "shellout"
+      bin.install_symlink "shellout" => "sho"
+    test: |
+      system "#{bin}/shellout", "--version"
+
+aurs:
+  - name: shellout-bin
+    homepage: https://github.com/JakubMajcher/shellout
+    description: Turn one English sentence into one shell command, confirm, run.
+    maintainers: ["MAINTAINER_NAME <MAINTAINER_EMAIL>"]
+    license: GPL-3.0-or-later
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/shellout-bin.git"
+    provides: [shellout]
+    conflicts: [shellout]
+    package: |-
+      install -Dm755 "./shellout" "${pkgdir}/usr/bin/shellout"
+      ln -s shellout "${pkgdir}/usr/bin/sho"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/shellout/LICENSE"
