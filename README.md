@@ -29,30 +29,38 @@ Run? [y/N/e]
 The first run creates `~/.config/shellout/config.toml` (or under `$XDG_CONFIG_HOME`,
 or at `$SHELLOUT_CONFIG`) and stops, so you can edit it before the first request.
 
-```toml
-default = "openai"
+The file it writes already has profiles for the providers that speak the
+OpenAI-compatible API, ready to use:
 
-[profiles.openai]
-base_url = "https://api.openai.com/v1"
-model = "gpt-5-mini"
-api_key_env = "OPENAI_API_KEY"
-timeout = "60s"
+| Profile | Needs | Notes |
+|---|---|---|
+| `openrouter` | `OPENROUTER_API_KEY` | one key, many models; change `model`, not the profile |
+| `openai` | `OPENAI_API_KEY` | |
+| `groq` | `GROQ_API_KEY` | fast, cheap |
+| `deepseek` | `DEEPSEEK_API_KEY` | cheap, good at code |
+| `gemini` | `GEMINI_API_KEY` | via Google's OpenAI-compatible endpoint |
+| `mistral` | `MISTRAL_API_KEY` | |
+| `xai` | `XAI_API_KEY` | |
+| `cerebras` | `CEREBRAS_API_KEY` | very fast inference |
+| `together` | `TOGETHER_API_KEY` | many open models |
+| `fireworks` | `FIREWORKS_API_KEY` | |
+| `perplexity` | `PERPLEXITY_API_KEY` | search-grounded |
+| `novita` | `NOVITA_API_KEY` | |
+| `local` | nothing | Ollama, commented out |
+| `lmstudio` | nothing | LM Studio, commented out |
 
-[profiles.openai.params]
-reasoning_effort = "minimal"
-max_completion_tokens = 1000
+The provider without a key is `default`, so the first request asks for its key
+rather than picking a provider for you. Switch with `shellout -p groq ...`.
 
-# A local model through Ollama, no API key needed.
-# [profiles.local]
-# base_url = "http://localhost:11434/v1"
-# model = "qwen2.5-coder:7b"
-```
-
+- Model names change. List the ones your key can reach with
+  `curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY"`
+  and put an id in `model`.
 - Profiles are named. `default` picks the one used without `-p`; `SHELLOUT_PROFILE`
   and then `-p NAME` override it, in that order.
 - `api_key_env` holds the **name** of the environment variable that holds the key,
   never the key itself, so the file is safe to keep in dotfiles. Leave it out for
-  local servers that need no authentication.
+  local servers that need no authentication. Missing key is reported per profile:
+  `shellout: GROQ_API_KEY is not set (profile: groq)`.
 - `params` is copied into the request body as-is, and shellout sends no other
   optional parameter. Use it for model settings and to cap cost
   (`max_completion_tokens`, `reasoning_effort`). Parameter names differ between
