@@ -3,6 +3,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,6 +138,70 @@ func TestSampleConstantsMatchSampleConfig(t *testing.T) {
 	if prof.APIKeyEnv != SampleKeyEnv {
 		t.Errorf("profile %q needs %q but SampleKeyEnv is %q",
 			SampleDefault, prof.APIKeyEnv, SampleKeyEnv)
+	}
+}
+
+// Every profile the sample ships must survive Load when selected. Decoding the
+// sample is not enough: Load is the path main actually takes, and it applies
+// checks the decoder does not, such as the forbidden params list and the
+// timeout rules.
+func TestEverySampleProfileSurvivesLoad(t *testing.T) {
+	names := SampleProfiles()
+	if len(names) == 0 {
+		t.Fatal("sample ships no profiles")
+	}
+
+	// A getenv that satisfies every api_key_env, so a failure here is about the
+	// profile and not about the environment of whoever runs the test.
+	anyKey := func(k string) string {
+		if strings.HasSuffix(k, "_API_KEY") {
+			return "test-key"
+		}
+		return ""
+	}
+
+	for _, name := range names {
+		p := filepath.Join(t.TempDir(), "config.toml")
+		if err := os.WriteFile(p, []byte(sampleConfig), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		prof, err := Load(p, name, anyKey)
+		if err != nil {
+			t.Errorf("profile %q: %v", name, err)
+			continue
+		}
+		if prof.Name != name {
+			t.Errorf("profile %q: got Name %q", name, prof.Name)
+		}
+		if prof.BaseURL == "" || prof.Model == "" {
+			t.Errorf("profile %q: incomplete: %+v", name, prof)
+		}
+		if prof.Timeout != 60*time.Second {
+			t.Errorf("profile %q: timeout = %v, want the 60s default", name, prof.Timeout)
+		}
+	}
+}
+
+// Selecting each profile must also confirm that a profile with no api_key_env
+// loads without a key, because the local profiles rely on that.
+func TestProfilesWithoutKeyEnvLoadWithoutAKey(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(p, []byte(sampleConfig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	none := func(string) string { return "" }
+	for _, name := range SampleProfiles() {
+		prof, err := Load(p, name, none)
+		if err == nil {
+			if prof.APIKey != "" {
+				t.Errorf("profile %q: got a key although none is set", name)
+			}
+			continue
+		}
+		var missing *MissingKeyError
+		if !errors.As(err, &missing) {
+			t.Errorf("profile %q: unexpected error %v", name, err)
+		}
 	}
 }
 
