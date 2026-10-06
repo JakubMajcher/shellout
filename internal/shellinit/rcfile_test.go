@@ -1,19 +1,23 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package shellinit
 
 import (
+	"strings"
 	"testing"
 )
 
-// The first-run guide hands over a ready to paste line, so the path must be the
-// file the user's shell actually reads.
-func TestRCFile(t *testing.T) {
+// The first-run guide hands over a line the user pastes into a shell, so the
+// path must be the file their shell actually reads, and it must stay relative
+// to the home directory.
+func TestRCPath(t *testing.T) {
 	cases := map[string]string{
-		"zsh":  "/home/u/.zshrc",
-		"bash": "/home/u/.bashrc",
-		"fish": "/home/u/.config/fish/config.fish",
+		"zsh":  "~/.zshrc",
+		"bash": "~/.bashrc",
+		"fish": "~/.config/fish/config.fish",
 	}
 	for shell, want := range cases {
-		got, err := RCFile(shell, "/home/u")
+		got, err := RCPath(shell)
 		if err != nil {
 			t.Errorf("%s: %v", shell, err)
 			continue
@@ -24,26 +28,42 @@ func TestRCFile(t *testing.T) {
 	}
 }
 
-// /bin/sh is what Collect reports when $SHELL is unset. There is no startup
-// file to name for it, and pretending otherwise would produce a wrong path.
-func TestRCFileUnknownShell(t *testing.T) {
-	if _, err := RCFile("sh", "/home/u"); err == nil {
-		t.Fatal("expected an error for sh")
-	}
-	if _, err := RCFile("tcsh", "/home/u"); err == nil {
-		t.Fatal("expected an error for tcsh")
+// Printing a home directory into a message someone may paste into a public
+// issue is noise, so the tilde form is the only accepted one.
+func TestRCPathNeverLeaksHomeDirectory(t *testing.T) {
+	for _, shell := range []string{"zsh", "bash", "fish"} {
+		got, err := RCPath(shell)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got[0] != '~' {
+			t.Errorf("%s: %q does not start with a tilde", shell, got)
+		}
+		if strings.Contains(got, "/home/") || strings.Contains(got, "/Users/") {
+			t.Errorf("%s: %q contains an absolute home directory", shell, got)
+		}
 	}
 }
 
-// A profile that has no startup file must still get a usable command.
-func TestRCFileAndScriptAgreeOnSupportedShells(t *testing.T) {
+// /bin/sh is what Collect reports when $SHELL is unset. There is no startup
+// file to name for it, and pretending otherwise would produce a wrong path.
+func TestRCPathUnknownShell(t *testing.T) {
+	for _, shell := range []string{"sh", "tcsh", "", "powershell"} {
+		if _, err := RCPath(shell); err == nil {
+			t.Errorf("%q: expected an error", shell)
+		}
+	}
+}
+
+// A shell that has an integration must also have a startup file to add it to,
+// otherwise the guide would suggest nothing for a shell it supports.
+func TestEveryScriptHasAnRCPath(t *testing.T) {
 	for _, shell := range []string{"zsh", "bash", "fish"} {
 		if _, err := Script(shell); err != nil {
 			t.Errorf("Script(%s): %v", shell, err)
 		}
-		if _, err := RCFile(shell, "/home/u"); err != nil {
-			t.Errorf("RCFile(%s): %v", shell, err)
+		if _, err := RCPath(shell); err != nil {
+			t.Errorf("RCPath(%s): %v", shell, err)
 		}
 	}
-
 }

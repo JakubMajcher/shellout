@@ -5,10 +5,7 @@
 // so cd/export work and the real command lands in history.
 package shellinit
 
-import (
-	"fmt"
-	"path/filepath"
-)
+import "fmt"
 
 const zshScript = `# shellout integration for zsh: eval "$(shellout init zsh)"
 shellout() {
@@ -84,16 +81,21 @@ func Script(shell string) (string, error) {
 	}
 }
 
-// RCFile returns the startup file to add the integration to, so the first run
-// can print a ready to paste line instead of making the user find it.
-func RCFile(shell, home string) (string, error) {
+// RCPath returns the startup file to add the integration to, as a path relative
+// to the home directory with a leading tilde.
+//
+// It is deliberately not absolute: the only thing that ever reads it is the
+// first run guide, whose line the user pastes into a shell. There, ~/.zshrc is
+// correct and /home/someone/.zshrc is noise, and printing a home directory into
+// a message someone may paste into a public issue is worth avoiding.
+func RCPath(shell string) (string, error) {
 	switch shell {
 	case "zsh":
-		return filepath.Join(home, ".zshrc"), nil
+		return "~/.zshrc", nil
 	case "bash":
-		return filepath.Join(home, ".bashrc"), nil
+		return "~/.bashrc", nil
 	case "fish":
-		return filepath.Join(home, ".config", "fish", "config.fish"), nil
+		return "~/.config/fish/config.fish", nil
 	default:
 		return "", fmt.Errorf("no known startup file for shell %q (supported: zsh, bash, fish)", shell)
 	}

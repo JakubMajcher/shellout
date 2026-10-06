@@ -3,45 +3,79 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/JakubMajcher/shellout/internal/app"
+	"github.com/JakubMajcher/shellout/internal/config"
 )
 
 // The first run is the only place a new user learns what shellout needs. These
-// tests pin the two things it must do and the two it must not.
-func TestFirstRunNoticeOrderAndContent(t *testing.T) {
-	got := firstRunNotice("/home/u/.config/shellout/config.toml", "zsh",
-		"/home/u/.zshrc", "openai", "OPENAI_API_KEY")
+// tests pin the order, the content, and the two things it must not do.
+func TestFirstRunNoticeOrder(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	t.Setenv("HOME", "/home/u")
+	got := firstRunNotice("/home/u/.config/shellout/config.toml",
+		config.SampleDefault, config.SampleKeyEnv)
 
-	// Integration is step 1, the key is step 2.
-	iInit := strings.Index(got, "shellout init zsh")
-	iKey := strings.Index(got, "export OPENAI_API_KEY")
-	if iInit < 0 {
-		t.Fatalf("no init suggestion:\n%s", got)
+	iConfig := strings.Index(got, "config.toml")
+	iKey := strings.Index(got, "OPENAI_API_KEY")
+	iInit := strings.Index(got, "init zsh")
+
+	if iConfig < 0 {
+		t.Fatalf("does not say where the config is:\n%s", got)
 	}
 	if iKey < 0 {
-		t.Fatalf("no key instruction:\n%s", got)
+		t.Fatalf("does not ask for the key:\n%s", got)
 	}
-	if iInit > iKey {
-		t.Error("integration must come before the key")
+	if iInit < 0 {
+		t.Fatalf("does not offer the integration:\n%s", got)
 	}
-	// The paste line must be complete and quoted, not a bare hint.
-	if !strings.Contains(got, `echo 'eval "$(shellout init zsh)"' >> /home/u/.zshrc`) {
-		t.Errorf("not a pasteable line:\n%s", got)
+	if iConfig > iKey {
+		t.Error("the config must be reported before the key")
 	}
-	if !strings.Contains(got, "https://platform.openai.com/api-keys") {
-		t.Errorf("no key URL for a known provider:\n%s", got)
+	if iKey > iInit {
+		t.Error("the key must come before the integration")
 	}
-	if !strings.Contains(got, "/home/u/.config/shellout/config.toml") {
-		t.Error("does not say where the config went")
+}
+
+// Step 1 must name the current default, because the key asked for in step 2
+// depends on it.
+func TestFirstRunNoticeNamesTheDefaultProfile(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	got := firstRunNotice("/tmp/config.toml", "openai", "OPENAI_API_KEY")
+	if !strings.Contains(got, `"openai"`) {
+		t.Errorf("does not name the default profile:\n%s", got)
+	}
+	if !strings.Contains(got, "-p NAME") {
+		t.Errorf("does not offer -p NAME as the alternative:\n%s", got)
+	}
+	if !strings.Contains(got, "sample config") {
+		t.Errorf("does not say a config was written:\n%s", got)
+	}
+}
+
+// The key instruction has to follow from the default, so a profile other than
+// the sample default must change the variable it names.
+func TestFirstRunNoticeKeyFollowsTheProfile(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	got := firstRunNotice("/tmp/config.toml", "groq", "GROQ_API_KEY")
+	if !strings.Contains(got, "GROQ_API_KEY") {
+		t.Errorf("does not name the key for the profile:\n%s", got)
+	}
+	if strings.Contains(got, "OPENAI_API_KEY") {
+		t.Errorf("leaked the sample default key:\n%s", got)
+	}
+	if !strings.Contains(got, "https://console.groq.com/keys") {
+		t.Errorf("no key URL for groq:\n%s", got)
 	}
 }
 
 // Nothing went wrong on the first run, so it must not read like a crash.
 func TestFirstRunNoticeIsNotFormattedAsAnError(t *testing.T) {
-	got := firstRunNotice("/tmp/config.toml", "zsh", "/home/u/.zshrc", "openai", "OPENAI_API_KEY")
+	t.Setenv("SHELL", "/bin/zsh")
+	got := firstRunNotice("/tmp/config.toml", "openai", "OPENAI_API_KEY")
 	if strings.HasPrefix(got, app.Name+":") {
 		t.Errorf("first run uses the error prefix:\n%s", got)
 	}
@@ -52,25 +86,62 @@ func TestFirstRunNoticeIsNotFormattedAsAnError(t *testing.T) {
 	}
 }
 
-// An unknown shell has no startup file to name, but the command still works.
-func TestFirstRunNoticeWithoutStartupFile(t *testing.T) {
-	got := firstRunNotice("/tmp/config.toml", "sh", "", "openai", "OPENAI_API_KEY")
-	if strings.Contains(got, ">>") {
-		t.Errorf("must not suggest appending to a file it does not know:\n%s", got)
+// The paste line must be relative to the home directory, not an absolute path.
+func TestFirstRunNoticeUsesTildeNotHomeDirectory(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	t.Setenv("HOME", "/home/someone")
+	got := firstRunNotice("/tmp/config.toml", "openai", "OPENAI_API_KEY")
+	if !strings.Contains(got, "' >> ~/.zshrc") {
+		t.Errorf("integration line does not use ~:\n%s", got)
 	}
-	if !strings.Contains(got, `eval "$(shellout init sh)"`) {
-		t.Errorf("should still show the eval line:\n%s", got)
+	if strings.Contains(got, "/home/someone") {
+		t.Errorf("prints the home directory into a pasteable line:\n%s", got)
 	}
 }
 
-// A provider shellout does not know must not get a guessed or wrong link.
+// Integration is the optional step, so it has to be marked as such.
+func TestFirstRunNoticeMarksIntegrationOptional(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	got := firstRunNotice("/tmp/config.toml", "openai", "OPENAI_API_KEY")
+	if !strings.Contains(strings.ToLower(got), "optional") {
+		t.Errorf("integration is not marked optional:\n%s", got)
+	}
+}
+
+// A shell with no integration must not produce a broken line.
+func TestFirstRunNoticeWithoutShellSupport(t *testing.T) {
+	t.Setenv("SHELL", "")
+	got := firstRunNotice("/tmp/config.toml", "openai", "OPENAI_API_KEY")
+	if strings.Contains(got, "init ") {
+		t.Errorf("suggests an integration for a shell it does not support:\n%s", got)
+	}
+	if !strings.Contains(got, "OPENAI_API_KEY") {
+		t.Errorf("lost the key step:\n%s", got)
+	}
+}
+
+// An unknown provider must not get a guessed or wrong link.
 func TestFirstRunNoticeUnknownProvider(t *testing.T) {
-	got := firstRunNotice("/tmp/config.toml", "zsh", "/home/u/.zshrc", "myownllm", "MY_LLM_KEY")
+	t.Setenv("SHELL", "/bin/zsh")
+	got := firstRunNotice("/tmp/config.toml", "myownllm", "MY_LLM_KEY")
 	if strings.Contains(got, "https://") {
 		t.Errorf("invented a URL for an unknown provider:\n%s", got)
 	}
 	if !strings.Contains(got, "MY_LLM_KEY") || !strings.Contains(got, "myownllm") {
 		t.Errorf("must still name the variable and profile:\n%s", got)
+	}
+}
+
+// The profile count in step 1 comes from the sample, so it cannot go stale.
+func TestFirstRunNoticeProfileCountMatchesSample(t *testing.T) {
+	t.Setenv("SHELL", "/bin/zsh")
+	got := firstRunNotice("/tmp/config.toml", "openai", "OPENAI_API_KEY")
+	want := config.SampleProfileCount()
+	if want < 10 {
+		t.Fatalf("sample ships only %d profiles", want)
+	}
+	if !strings.Contains(got, "with "+strconv.Itoa(want)+" profiles") {
+		t.Errorf("does not report %d profiles:\n%s", want, got)
 	}
 }
 
@@ -82,9 +153,6 @@ func TestMissingKeyNoticeNamesTheSelectedProfile(t *testing.T) {
 	}
 	if !strings.Contains(got, "export GROQ_API_KEY=...") {
 		t.Errorf("does not say how to set it:\n%s", got)
-	}
-	if !strings.Contains(got, "https://console.groq.com/keys") {
-		t.Errorf("no key URL for groq:\n%s", got)
 	}
 	if strings.Contains(got, "OPENAI") {
 		t.Error("leaked the sample default into another profile's notice")
@@ -104,17 +172,9 @@ func TestMissingKeyNoticeUnknownProvider(t *testing.T) {
 // Every profile the sample ships must have a key URL, or a new user choosing it
 // gets a worse message than the default one.
 func TestEverySampleProfileHasAKeyURL(t *testing.T) {
-	profiles := map[string]string{
-		"openai": "OPENAI_API_KEY", "openrouter": "OPENROUTER_API_KEY",
-		"groq": "GROQ_API_KEY", "deepseek": "DEEPSEEK_API_KEY",
-		"gemini": "GEMINI_API_KEY", "mistral": "MISTRAL_API_KEY",
-		"xai": "XAI_API_KEY", "cerebras": "CEREBRAS_API_KEY",
-		"together": "TOGETHER_API_KEY", "fireworks": "FIREWORKS_API_KEY",
-		"perplexity": "PERPLEXITY_API_KEY", "novita": "NOVITA_API_KEY",
-	}
-	for name, env := range profiles {
+	for _, name := range config.SampleProfiles() {
 		if _, ok := keyURLs[name]; !ok {
-			t.Errorf("no key URL for shipped profile %q (%s)", name, env)
+			t.Errorf("no key URL for shipped profile %q", name)
 		}
 	}
 }

@@ -108,7 +108,7 @@ func run(args []string) int {
 	}
 	profile, err := config.Load(path, inv.profile, os.Getenv)
 	if err != nil {
-		return configProblem(path, inv.profile, err)
+		return configProblem(inv.profile, err)
 	}
 
 	tty := ui.Terminal{In: os.Stdin, Out: os.Stderr}

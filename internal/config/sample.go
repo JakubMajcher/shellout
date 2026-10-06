@@ -2,6 +2,12 @@
 
 package config
 
+import (
+	"sort"
+
+	"github.com/BurntSushi/toml"
+)
+
 // SampleDefault and SampleKeyEnv describe the profile the generated config
 // selects. main prints them on the first run, so a test in this package keeps
 // them in step with sampleConfig instead of letting the two drift apart.
@@ -9,6 +15,28 @@ const (
 	SampleDefault = "openai"
 	SampleKeyEnv  = "OPENAI_API_KEY"
 )
+
+// SampleProfiles returns the profile names the sample config ships, read from
+// the sample itself rather than hardcoded, so callers that talk about the
+// shipped set cannot fall out of step with it.
+func SampleProfiles() []string {
+	var fc struct {
+		Profiles map[string]fileProfile `toml:"profiles"`
+	}
+	if _, err := toml.Decode(sampleConfig, &fc); err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(fc.Profiles))
+	for n := range fc.Profiles {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// SampleProfileCount is len(SampleProfiles()), for messages that only need the
+// number.
+func SampleProfileCount() int { return len(SampleProfiles()) }
 
 // Model names change often; list the ones your key can reach with
 //
