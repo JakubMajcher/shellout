@@ -25,3 +25,56 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
+
+      # GoReleaser publishes as part of the same run it builds, and there is no
+      # separate publish command, so this cannot run before the upload. It still
+      # catches the failure modes that are worth knowing about: a corrupt
+      # archive, a binary that reports the wrong version, a package missing the
+      # sho symlink, or a placeholder maintainer shipped to users.
+      - name: Verify the published artifacts
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          echo "--- checksums ---"
+          (cd dist && sha256sum -c checksums.txt)
+          echo "--- artifacts exist for every platform ---"
+          for os in linux darwin; do
+            for arch in amd64 arm64; do
+              f="dist/shellout_${tag}_${os}_${arch}.tar.gz"
+              test -f "$f" || { echo "missing $f" >&2; exit 1; }
+            done
+          done
+          echo "--- the binary reports the tag it was released under ---"
+          got=$(./dist/shellout_linux_amd64*/shellout --version)
+          echo "binary says: $got"
+          test "$got" = "$tag" || { echo "expected $tag" >&2; exit 1; }
+          echo "--- .deb has the sho symlink ---"
+          deb=$(ls dist/*_linux_amd64.deb)
+          ar p "$deb" data.tar.gz | tar -tzv | grep -qE 'usr/bin/sho -> /usr/bin/shellout' \
+            || { echo "no sho symlink in $deb" >&2; exit 1; }
+          echo "--- .deb metadata is not a placeholder ---"
+          ar p "$deb" control.tar.gz | tar -xzO ./control > /tmp/control
+          grep -E '^(Package|Version|Maintainer)' /tmp/control
+          if grep -q 'MAINTAINER_NAME\|MAINTAINER_EMAIL' /tmp/control; then
+            echo "the .deb still carries the placeholder maintainer" >&2
+            exit 1
+          fi
+          echo "--- homebrew formula and AUR pkgbuild were generated ---"
+          test -f dist/homebrew/shellout.rb || { echo "no homebrew formula" >&2; exit 1; }
+          grep -q 'on_linux' dist/homebrew/shellout.rb \
+            || { echo "formula lost its on_linux section" >&2; exit 1; }
+          test -f dist/aur/shellout-bin.pkgbuild || { echo "no AUR pkgbuild" >&2; exit 1; }
+          grep -q '^provides=' dist/aur/shellout-bin.pkgbuild || { echo "pkgbuild lost provides=" >&2; exit 1; }
+          echo "--- uploaded release assets match what was built ---"
+          missing=0
+          for f in dist/*.tar.gz dist/*.deb dist/*.rpm dist/*.apk; do
+            base=$(basename "$f")
+            code=$(curl -sL -o /dev/null -w '%{http_code}' \
+              "https://github.com/${{ github.repository }}/releases/download/${tag}/${base}")
+            if [ "$code" != "200" ]; then
+              echo "not downloadable: ${base} (HTTP ${code})"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0 || { echo "some assets are missing from the release" >&2; exit 1; }
+          echo "all artifacts verified"
