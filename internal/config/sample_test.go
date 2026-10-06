@@ -31,8 +31,8 @@ func TestSampleConfigLoads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sample does not load: %v", err)
 	}
-	if prof.Name != "openrouter" {
-		t.Fatalf("default profile = %q, want openrouter", prof.Name)
+	if prof.Name != SampleDefault {
+		t.Fatalf("default profile = %q, want %q", prof.Name, SampleDefault)
 	}
 	if prof.Timeout != 60*time.Second {
 		t.Fatalf("timeout = %v, want 60s", prof.Timeout)
@@ -113,6 +113,30 @@ func TestSampleDocumentsCommandTimeoutWithoutEnablingIt(t *testing.T) {
 func TestSampleHasNoBackticks(t *testing.T) {
 	if strings.Contains(sampleConfig, "`") {
 		t.Error("sampleConfig is a raw string literal and must not contain a backtick")
+	}
+}
+
+// main prints SampleDefault and SampleKeyEnv on the first run, so they must
+// keep describing the sample. Without this the guide could name a profile the
+// generated config does not select.
+func TestSampleConstantsMatchSampleConfig(t *testing.T) {
+	var fc struct {
+		Default  string                 `toml:"default"`
+		Profiles map[string]fileProfile `toml:"profiles"`
+	}
+	if _, err := toml.Decode(sampleConfig, &fc); err != nil {
+		t.Fatal(err)
+	}
+	if fc.Default != SampleDefault {
+		t.Errorf("sample selects %q but SampleDefault is %q", fc.Default, SampleDefault)
+	}
+	prof, ok := fc.Profiles[SampleDefault]
+	if !ok {
+		t.Fatalf("sample has no profile %q", SampleDefault)
+	}
+	if prof.APIKeyEnv != SampleKeyEnv {
+		t.Errorf("profile %q needs %q but SampleKeyEnv is %q",
+			SampleDefault, prof.APIKeyEnv, SampleKeyEnv)
 	}
 }
 

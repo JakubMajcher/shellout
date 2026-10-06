@@ -46,6 +46,18 @@ func (e *CreatedError) Error() string {
 	return fmt.Sprintf("created sample config at %s, edit it and run again", e.Path)
 }
 
+// MissingKeyError means the selected profile names a key environment variable
+// that is not set. It is typed so the caller can print where to get a key
+// instead of having to parse the message.
+type MissingKeyError struct {
+	Profile string
+	Env     string
+}
+
+func (e *MissingKeyError) Error() string {
+	return fmt.Sprintf("%s is not set (profile: %s)", e.Env, e.Profile)
+}
+
 type fileConfig struct {
 	Default  string                 `toml:"default"`
 	Profiles map[string]fileProfile `toml:"profiles"`
@@ -151,7 +163,7 @@ func Load(path, flagProfile string, getenv func(string) string) (Profile, error)
 	if p.APIKeyEnv != "" {
 		p.APIKey = getenv(p.APIKeyEnv)
 		if p.APIKey == "" {
-			return Profile{}, fmt.Errorf("%s is not set (profile: %s)", p.APIKeyEnv, name)
+			return Profile{}, &MissingKeyError{Profile: name, Env: p.APIKeyEnv}
 		}
 	}
 	return p, nil

@@ -241,11 +241,11 @@ func TestMissingFileWritesLoadableSample(t *testing.T) {
 		t.Fatalf("message = %q", err.Error())
 	}
 	// The written sample must load with only the default profile's key present.
-	got, err := Load(p, "", env(map[string]string{"OPENROUTER_API_KEY": "k"}))
+	got, err := Load(p, "", env(map[string]string{SampleKeyEnv: "k"}))
 	if err != nil {
 		t.Fatalf("sample does not load: %v", err)
 	}
-	if got.Name != "openrouter" || got.Model == "" || got.Params["provider"] == nil {
+	if got.Name != SampleDefault || got.Model == "" {
 		t.Fatalf("unexpected sample profile: %+v", got)
 	}
 

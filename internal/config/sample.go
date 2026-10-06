@@ -2,6 +2,14 @@
 
 package config
 
+// SampleDefault and SampleKeyEnv describe the profile the generated config
+// selects. main prints them on the first run, so a test in this package keeps
+// them in step with sampleConfig instead of letting the two drift apart.
+const (
+	SampleDefault = "openai"
+	SampleKeyEnv  = "OPENAI_API_KEY"
+)
+
 // Model names change often; list the ones your key can reach with
 //
 //	curl -s <base_url>/models -H "Authorization: Bearer $YOUR_KEY_ENV"
@@ -12,7 +20,7 @@ const sampleConfig = `# shellout config. Docs: https://github.com/JakubMajcher/s
 
 # Profile used without -p. The SHELLOUT_PROFILE environment variable overrides it.
 # Switch profiles with: shellout -p NAME ...
-default = "openrouter"
+default = "openai"
 
 # ---------------------------------------------------------------------------
 # OpenRouter: one key, hundreds of models. Swap the model, not the profile.

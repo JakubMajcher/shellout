@@ -5,7 +5,10 @@
 // so cd/export work and the real command lands in history.
 package shellinit
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+)
 
 const zshScript = `# shellout integration for zsh: eval "$(shellout init zsh)"
 shellout() {
@@ -78,5 +81,20 @@ func Script(shell string) (string, error) {
 		return fishScript, nil
 	default:
 		return "", fmt.Errorf("unsupported shell %q (supported: zsh, bash, fish)", shell)
+	}
+}
+
+// RCFile returns the startup file to add the integration to, so the first run
+// can print a ready to paste line instead of making the user find it.
+func RCFile(shell, home string) (string, error) {
+	switch shell {
+	case "zsh":
+		return filepath.Join(home, ".zshrc"), nil
+	case "bash":
+		return filepath.Join(home, ".bashrc"), nil
+	case "fish":
+		return filepath.Join(home, ".config", "fish", "config.fish"), nil
+	default:
+		return "", fmt.Errorf("no known startup file for shell %q (supported: zsh, bash, fish)", shell)
 	}
 }
