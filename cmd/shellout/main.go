@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -155,8 +156,11 @@ func run(args []string) int {
 		}
 		return 0
 	}
-	code, err := runner.Run(info.ShellPath, command)
+	code, err := runner.Run(info.ShellPath, command, profile.CommandTimeout)
 	if err != nil {
+		if errors.Is(err, runner.ErrTimeout) {
+			return fail(code, err.Error())
+		}
 		return fail(1, fmt.Sprintf("cannot run %s: %v", info.ShellPath, err))
 	}
 	return code

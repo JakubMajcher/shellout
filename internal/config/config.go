@@ -31,7 +31,12 @@ type Profile struct {
 	APIKeyEnv string
 	APIKey    string // value read from the APIKeyEnv variable; empty when APIKeyEnv is empty
 	Timeout   time.Duration
-	Params    map[string]any
+	// CommandTimeout caps how long the approved command may run. Zero, the
+	// default, means no cap. It is deliberately a separate setting from
+	// Timeout: sharing one key would let a 60s API timeout silently start
+	// killing commands after a minute.
+	CommandTimeout time.Duration
+	Params         map[string]any
 }
 
 // CreatedError means the config file did not exist and a sample was written.
@@ -47,11 +52,12 @@ type fileConfig struct {
 }
 
 type fileProfile struct {
-	BaseURL   string         `toml:"base_url"`
-	Model     string         `toml:"model"`
-	APIKeyEnv string         `toml:"api_key_env"`
-	Timeout   string         `toml:"timeout"`
-	Params    map[string]any `toml:"params"`
+	BaseURL        string         `toml:"base_url"`
+	Model          string         `toml:"model"`
+	APIKeyEnv      string         `toml:"api_key_env"`
+	Timeout        string         `toml:"timeout"`
+	CommandTimeout string         `toml:"command_timeout"`
+	Params         map[string]any `toml:"params"`
 }
 
 // Path returns the config file location.
@@ -122,13 +128,25 @@ func Load(path, flagProfile string, getenv func(string) string) (Profile, error)
 		timeout = d
 	}
 
+	// Absent or "0" means no limit. A negative value is rejected rather than
+	// treated as no limit, because -1 reads like a mistake.
+	commandTimeout := time.Duration(0)
+	if fp.CommandTimeout != "" {
+		d, err := time.ParseDuration(fp.CommandTimeout)
+		if err != nil || d < 0 {
+			return Profile{}, fmt.Errorf("config %s: profile %q: invalid command_timeout %q", path, name, fp.CommandTimeout)
+		}
+		commandTimeout = d
+	}
+
 	p := Profile{
-		Name:      name,
-		BaseURL:   fp.BaseURL,
-		Model:     fp.Model,
-		APIKeyEnv: fp.APIKeyEnv,
-		Timeout:   timeout,
-		Params:    fp.Params,
+		Name:           name,
+		BaseURL:        fp.BaseURL,
+		Model:          fp.Model,
+		APIKeyEnv:      fp.APIKeyEnv,
+		Timeout:        timeout,
+		CommandTimeout: commandTimeout,
+		Params:         fp.Params,
 	}
 	if p.APIKeyEnv != "" {
 		p.APIKey = getenv(p.APIKeyEnv)

@@ -85,6 +85,37 @@ func TestEverySampleProfileIsValid(t *testing.T) {
 }
 
 // The sample must never contain a key value, only the variable name.
+// The sample must document command_timeout without setting it, so a new user
+// gets no limit and still learns the key exists.
+func TestSampleDocumentsCommandTimeoutWithoutEnablingIt(t *testing.T) {
+	var fc struct {
+		Profiles map[string]fileProfile `toml:"profiles"`
+	}
+	if _, err := toml.Decode(sampleConfig, &fc); err != nil {
+		t.Fatal(err)
+	}
+	for name, fp := range fc.Profiles {
+		if fp.CommandTimeout != "" {
+			t.Errorf("profile %q sets command_timeout = %q; the sample must leave it unset",
+				name, fp.CommandTimeout)
+		}
+	}
+	if !strings.Contains(sampleConfig, "command_timeout") {
+		t.Error("sample does not mention command_timeout at all")
+	}
+	if !strings.Contains(sampleConfig, "# command_timeout = ") {
+		t.Error("sample must show the key commented out, ready to uncomment")
+	}
+}
+
+// A raw Go string cannot contain backticks, and the sample is one. If a comment
+// ever gets one the file stops compiling, so assert the shape explicitly.
+func TestSampleHasNoBackticks(t *testing.T) {
+	if strings.Contains(sampleConfig, "`") {
+		t.Error("sampleConfig is a raw string literal and must not contain a backtick")
+	}
+}
+
 func TestSampleHasNoKeyValues(t *testing.T) {
 	for _, line := range strings.Split(sampleConfig, "\n") {
 		if strings.Contains(line, "sk-") || strings.Contains(line, "Bearer ") {

@@ -174,6 +174,62 @@ func TestMissingAPIKey(t *testing.T) {
 	}
 }
 
+// command_timeout must default to no limit, and must not be confused with the
+// API timeout. If one key drove both, a 60s API timeout would start killing
+// commands after a minute.
+func TestCommandTimeoutDefaultsToUnlimited(t *testing.T) {
+	p := writeConfig(t, validConfig)
+	got, err := Load(p, "", env(map[string]string{"OPENAI_API_KEY": "k"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.CommandTimeout != 0 {
+		t.Errorf("CommandTimeout = %v, want 0 (no limit)", got.CommandTimeout)
+	}
+	if got.Timeout != 60*time.Second {
+		t.Errorf("API Timeout = %v, want 60s", got.Timeout)
+	}
+}
+
+func TestCommandTimeoutIsReadIndependently(t *testing.T) {
+	body := strings.Replace(validConfig, `timeout = "5s"`, "timeout = \"5s\"\ncommand_timeout = \"2m\"", 1)
+	got, err := Load(writeConfig(t, body), "local", env(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.CommandTimeout != 2*time.Minute {
+		t.Errorf("CommandTimeout = %v, want 2m", got.CommandTimeout)
+	}
+	if got.Timeout != 5*time.Second {
+		t.Errorf("API Timeout = %v, want 5s: the two must stay separate", got.Timeout)
+	}
+}
+
+// Zero is the documented way to say "no limit" and must be accepted.
+func TestCommandTimeoutZeroIsValid(t *testing.T) {
+	body := strings.Replace(validConfig, `timeout = "5s"`, "timeout = \"5s\"\ncommand_timeout = \"0s\"", 1)
+	got, err := Load(writeConfig(t, body), "local", env(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.CommandTimeout != 0 {
+		t.Errorf("CommandTimeout = %v, want 0", got.CommandTimeout)
+	}
+}
+
+// A negative limit looks like a mistake, so it is rejected rather than treated
+// as "no limit".
+func TestCommandTimeoutRejectsNegativeAndGarbage(t *testing.T) {
+	for _, v := range []string{"-1s", "soon"} {
+		body := strings.Replace(validConfig, `timeout = "5s"`,
+			"timeout = \"5s\"\ncommand_timeout = \""+v+"\"", 1)
+		_, err := Load(writeConfig(t, body), "local", env(nil))
+		if err == nil || !strings.Contains(err.Error(), `invalid command_timeout "`+v+`"`) {
+			t.Errorf("%s: err = %v", v, err)
+		}
+	}
+}
+
 func TestMissingFileWritesLoadableSample(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "sub", "config.toml")
 	_, err := Load(p, "", env(nil))

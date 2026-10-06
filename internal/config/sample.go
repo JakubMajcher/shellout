@@ -135,6 +135,19 @@ api_key_env = "NOVITA_API_KEY"
 timeout = "60s"
 
 # ===========================================================================
+# Optional per profile
+# ===========================================================================
+
+# The "timeout" above caps how long the model may think. "command_timeout" caps
+# how long the approved command may run, and is unset by default: a cap that
+# fires half way through can leave a truncated archive or a partial transfer
+# behind, and you can see whether a command is long. Uncomment to add one.
+#
+# When it fires, the whole command is killed and shellout exits 124, the same
+# code the "timeout" command uses.
+# command_timeout = "10m"
+
+# ===========================================================================
 # No API key needed. Uncomment the one you actually run, then use -p.
 # ===========================================================================
 
