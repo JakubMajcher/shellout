@@ -21,18 +21,24 @@ With a real profile (OpenAI key or local Ollama), in a terminal:
 
 ## Versioning
 
-Versions are prereleases while the tool is young. Tag `vX.Y.Z-beta`, starting at
-`v0.0.2-beta`, and bump `Y.Z` for each release. Drop `-beta` when the API is
+Versions are prereleases while the tool is young. Tag `vX.Y-beta`, two components,
+starting at `v0.1-beta`, and bump `Y` for each release. Drop `-beta` when the API is
 considered stable.
+
+The leading `v` is GitHub convention and `release.yml` triggers on `tags: ["v*"]`. It
+is not part of the version: inside the packages you get `0.1~beta` on Debian and
+`0.1-beta` elsewhere. Two components, not three, so `0.2-beta` reads as "the second
+release" rather than "less than one".
 
 ## Releasing
 
-Tag `vX.Y.Z-beta` and push the tag. GoReleaser builds the archives and packages,
-updates the Homebrew tap and pushes the AUR package. Needs the `HOMEBREW_TAP_TOKEN`
-and `AUR_KEY` repository secrets.
+Tag `vX.Y-beta` and push the tag. GoReleaser builds the archives and packages, then
+publishes them: a GitHub Release, the Homebrew tap, and the AUR package. Needs the
+`HOMEBREW_TAP_TOKEN` repository secret for the tap.
 
-The `maintainer` field in `.goreleaser.yaml` must be filled in before the first
-release; it currently holds a placeholder.
+The AUR publisher needs an `AUR_KEY` secret and a registered package. Until both
+exist, `skip_upload: auto` in `.goreleaser.yaml` leaves the `PKGBUILD` in `dist/` for
+review and skips the upload, which also covers every prerelease tag.
 
 ## Code
 
