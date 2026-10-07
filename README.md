@@ -58,14 +58,36 @@ OpenAI-compatible API, ready to use:
 | `local` | nothing | Ollama, commented out |
 | `lmstudio` | nothing | LM Studio, commented out |
 
-The provider without a key is `default`, so the first request asks for its key
-rather than picking a provider for you. Switch with `shellout -p groq ...`.
+The generated config picks one profile as `default`, so the first request asks
+for that profile's key rather than silently choosing a provider for you.
+
+### Choosing a profile
+
+`-p` uses a profile **for that one call and changes nothing on disk**:
+
+```
+shellout -p groq list files      # this call only
+shellout list files              # back to default
+```
+
+Nothing is written to the config file. To change what you get without `-p`, either
+edit `default` in the config, or export the variable:
+
+```
+export SHELLOUT_PROFILE=groq     # every call in this shell
+```
+
+Highest wins:
+
+| Order | Source | Lasts |
+|---|---|---|
+| 1 | `-p NAME` | this call |
+| 2 | `$SHELLOUT_PROFILE` | this shell session |
+| 3 | `default` in the config | until you edit it |
 
 - Model names change. List the ones your key can reach with
   `curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY"`
   and put an id in `model`.
-- Profiles are named. `default` picks the one used without `-p`; `SHELLOUT_PROFILE`
-  and then `-p NAME` override it, in that order.
 - `api_key_env` holds the **name** of the environment variable that holds the key,
   never the key itself, so the file is safe to keep in dotfiles. Leave it out for
   local servers that need no authentication. Missing key is reported per profile:
