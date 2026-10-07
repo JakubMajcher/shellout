@@ -24,15 +24,31 @@ and nothing else.
 
 ## Install
 
-- Homebrew (macOS, Linux): `brew install JakubMajcher/tap/shellout`
-- Arch Linux (AUR): not published yet — `yay -S shellout-bin` will work once the AUR
-  package is up, use the archive from Releases in the meantime
-- Debian/Ubuntu: download the `.deb` from Releases, then `sudo apt install ./shellout_*.deb`
-- Fedora/openSUSE: download the `.rpm`, then `sudo dnf install ./shellout-*.rpm`
-- Alpine: download the `.apk`, then `sudo apk add --allow-untrusted ./shellout_*.apk`
-- Any Linux or macOS: download the archive from Releases and put `shellout` on your PATH.
-- Go: `go install github.com/JakubMajcher/shellout/cmd/shellout@latest`
-  (installs only `shellout`; add `alias sho=shellout` yourself)
+| System | Command | |
+|---|---|---|
+| Homebrew (macOS, Linux) | `brew install JakubMajcher/tap/shellout` | |
+| Debian / Ubuntu | `sudo apt install ./shellout_*.deb` | `.deb` from Releases |
+| Fedora / openSUSE | `sudo dnf install ./shellout-*.rpm` | `.rpm` from Releases |
+| Alpine | `sudo apk add --allow-untrusted ./shellout_*.apk` | `.apk` from Releases |
+| Any Linux or macOS | download the archive from Releases, put `shellout` on your `PATH` | |
+| Go | `go install github.com/JakubMajcher/shellout/cmd/shellout@latest` | installs only `shellout`, no `sho` |
+| Arch Linux (AUR) | `yay -S shellout-bin` | ⏳ **Soon** — not published yet |
+
+The Arch row does not work today: the AUR package is not registered yet. Take the
+archive from Releases until it is.
+
+## Shell integration (optional)
+
+Without it, the command runs in a child process: `cd` and `export` have no effect,
+your aliases and functions from `.zshrc` are not available, and history shows
+`sho ...` instead of the command. With it, the approved command runs in your current
+shell and goes into history.
+
+- zsh: `eval "$(shellout init zsh)"` in `~/.zshrc`
+- bash: `eval "$(shellout init bash)"` in `~/.bashrc`
+- fish: `shellout init fish | source` in `~/.config/fish/config.fish`
+  (history needs fish 4.0 or newer; on fish 3.x the command still runs, it just is
+  not added to history)
 
 ## Configure
 
@@ -67,8 +83,8 @@ for that profile's key rather than silently choosing a provider for you.
 `-p` uses a profile **for that one call and changes nothing on disk**:
 
 ```
-shellout -p groq list files      # this call only
-shellout list files              # back to default
+sho -p groq list files           # this call only
+sho list files                   # back to default
 ```
 
 Nothing is written to the config file. To change what you get without `-p`, either
@@ -98,8 +114,18 @@ Highest wins:
   (`max_completion_tokens`, `reasoning_effort`). Parameter names differ between
   providers; use the ones yours accepts. `params` may not set `model`, `messages`,
   `response_format` or `stream`, because shellout sets those itself.
-- **OpenRouter**: add `provider = { require_parameters = true }` to `params`,
-  or OpenRouter may route the request to a provider that ignores the JSON schema.
+- **OpenRouter**: OpenRouter loads your request across several providers for the same
+  model. It already *prefers* providers that support `response_format`, but only as a
+  soft preference: if no provider supports it, the request still goes out and the JSON
+  schema is ignored. `provider = { require_parameters = true }` turns that into a hard
+  filter, at the cost of fewer providers to balance across. Put it in the profile's
+  `params`:
+  ```toml
+  [profiles.openrouter.params]
+  provider = { require_parameters = true }
+  ```
+  The generated config already has it, so you only need this if you wrote the profile
+  by hand.
 - The model must support structured outputs (`response_format: json_schema`).
   shellout validates every answer itself and retries once, but it cannot invent a
   command the endpoint never sent.
@@ -109,19 +135,6 @@ Highest wins:
 The shell parses your words before shellout sees them, so `sho find files > 1G`
 creates a file named `1G`. Run `sho` with no words and type the request at the `>`
 prompt instead.
-
-## Shell integration (optional)
-
-Without it, the command runs in a child process: `cd` and `export` have no effect,
-your aliases and functions from `.zshrc` are not available, and history shows
-`sho ...` instead of the command. With it, the approved command runs in your current
-shell and goes into history.
-
-- zsh: `eval "$(shellout init zsh)"` in `~/.zshrc`
-- bash: `eval "$(shellout init bash)"` in `~/.bashrc`
-- fish: `shellout init fish | source` in `~/.config/fish/config.fish`
-  (history needs fish 4.0 or newer; on fish 3.x the command still runs, it just is
-  not added to history)
 
 ## Privacy
 
