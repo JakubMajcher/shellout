@@ -25,7 +25,8 @@ and nothing else.
 ## Install
 
 - Homebrew (macOS, Linux): `brew install JakubMajcher/tap/shellout`
-- Arch Linux (AUR): `yay -S shellout-bin`
+- Arch Linux (AUR): not published yet — `yay -S shellout-bin` will work once the AUR
+  package is up, use the archive from Releases in the meantime
 - Debian/Ubuntu: download the `.deb` from Releases, then `sudo apt install ./shellout_*.deb`
 - Fedora/openSUSE: download the `.rpm`, then `sudo dnf install ./shellout-*.rpm`
 - Alpine: download the `.apk`, then `sudo apk add --allow-untrusted ./shellout_*.apk`

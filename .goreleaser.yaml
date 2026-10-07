@@ -60,6 +60,9 @@ aurs:
     license: GPL-3.0-or-later
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/shellout-bin.git"
+    # AUR registration is closed, so there is no package to push to yet. The
+    # PKGBUILD is still generated into dist/ for review; only stable tags try SSH.
+    skip_upload: auto
     provides: [shellout]
     conflicts: [shellout]
     package: |-
