@@ -21,18 +21,21 @@ With a real profile (OpenAI key or local Ollama), in a terminal:
 
 ## Versioning
 
-Versions are prereleases while the tool is young. Tag `vX.Y-beta`, two components,
-starting at `v0.1-beta`, and bump `Y` for each release. Drop `-beta` when the API is
-considered stable.
+Versions are prereleases while the tool is young. Tag `X.Y-beta`, two components, with
+no leading `v`: `0.1-beta`, not `v0.1-beta`. Bump `Y` for each release. Drop `-beta`
+when the API is considered stable.
 
-The leading `v` is GitHub convention and `release.yml` triggers on `tags: ["v*"]`. It
-is not part of the version: inside the packages you get `0.1~beta` on Debian and
-`0.1-beta` elsewhere. Two components, not three, so `0.2-beta` reads as "the second
-release" rather than "less than one".
+No `v`, because it would not be the version. It shows up in release titles, in
+`brew install` output and in download URLs, none of which need it. Debian still writes
+its own spelling, `0.1~beta`. Two components, not three, so `0.2-beta` reads as "the
+second release" rather than "less than one".
+
+`release.yml` triggers on `tags: ["[0-9]*"]`, anchored on a digit so an unrelated tag
+cannot start a release.
 
 ## Releasing
 
-Tag `vX.Y-beta` and push the tag. GoReleaser builds the archives and packages, then
+Tag `X.Y-beta` and push the tag. GoReleaser builds the archives and packages, then
 publishes them: a GitHub Release, the Homebrew tap, and the AUR package. Needs the
 `HOMEBREW_TAP_TOKEN` repository secret for the tap.
 

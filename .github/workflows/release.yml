@@ -1,7 +1,10 @@
 name: release
 on:
   push:
-    tags: ["v*"]
+    # Version tags carry no leading v: 0.1-beta, not v0.1-beta. The glob is
+    # anchored on a digit so an unrelated tag like "nightly" cannot start a
+    # release.
+    tags: ["[0-9]*"]
 
 permissions:
   contents: write
